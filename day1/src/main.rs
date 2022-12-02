@@ -5,7 +5,15 @@ fn main() {
     let path = "input.txt";
     let input = fs::read_to_string(path).expect("Something went wrong reading the file");
 
-    let greatest: usize = input.split("\n\n").map(|elf| elf.split("\n").filter_map(|line| line.parse().ok()).reduce(|accum, x| accum + x).unwrap()).reduce(|accum, x| { if accum >= x { accum } else {x}}).unwrap();
+    let greatest: usize = input
+        .split("\n\n")
+        .map(|elf| elf.split("\n")
+            .filter_map(|line| line.parse().ok())
+            .reduce(|accum, x| accum + x)
+            .unwrap()
+        ).reduce(|accum, x| { 
+            if accum >= x { accum } else {x}
+        }).unwrap();
     
     println!("{:?}", greatest);
 
