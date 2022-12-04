@@ -5,6 +5,8 @@ use std::collections::HashMap;
 // update: hashmaps are probably more efficient idk
 // the algorithm is at least O(n) (i think),
 // which is better than the O(n^2) algorithm i used before
+// update update: everyone else used sets. i should've used
+// them too. unfortunately, i forgot about them lol
 fn find_mistake((first, last): (&str, &str)) -> Vec<char> {
     let mut totals: HashMap<char, u32> = HashMap::new();
     first.chars().for_each(|c| {
