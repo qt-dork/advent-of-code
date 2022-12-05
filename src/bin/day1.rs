@@ -1,15 +1,9 @@
-use std::fs;
-
 // iliana also did tests, which i think is a good idea.
 // i'll start using tests going forward.
 
 fn main() {
-    // file stuff (doesn't count)
-    let path = "input.txt";
-    // iliana also uses include_str!() to read the file instaed of what i used.
-    // i think it's cleaner.
-    let input = fs::read_to_string(path).expect("Something went wrong reading the file");
-
+    let input = include_str!("day1.txt");
+    let lines = INPUT.lines();
     // i didn't need to do this in main, i should've made an answers function
     // instead so main only handled io stuff
     let greatest: usize = input
@@ -47,4 +41,32 @@ fn main() {
     // once again could've used .sum() instead of .fold()
     let top_three_result = list.iter().fold(0, |accum, x| accum + x);
     println!("{:?}", top_three_result);
+}
+
+fn process_part1(input: &str) -> usize {
+    input
+        .lines()
+}
+
+fn process_part2(input: &str) -> usize {
+    let mut list: Vec<usize> = input.split("\n\n").map(|elf| elf.split("\n").filter_map(|line| line.parse().ok()).fold(0, |accum, x: usize| accum + x)).collect();
+    list.sort();
+    list.reverse();
+    list.truncate(3);
+    list.iter().fold(0, |accum, x| accum + x)
+}
+
+
+#[cfg(test)]
+#[test]
+fn part1_works() {
+    let input = include_str!("day1_test.txt");
+    assert_eq!(process_part1(input), 2);
+}
+
+#[cfg(test)]
+#[test]
+fn part2_works() {
+    let input = include_str!("day1_test.txt");
+    assert_eq!(process_part2(input), 4);
 }

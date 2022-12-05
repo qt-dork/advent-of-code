@@ -71,3 +71,17 @@ fn main() {
     //     Some('s'),
     // ]);
 }
+
+#[cfg(test)]
+#[test]
+fn part1_works() {
+    let input = include_str!("day1_test.txt");
+    assert_eq!(process_part1(input), 2);
+}
+
+#[cfg(test)]
+#[test]
+fn part2_works() {
+    let input = include_str!("day1_test.txt");
+    assert_eq!(process_part2(input), 4);
+}

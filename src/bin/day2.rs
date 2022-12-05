@@ -1,18 +1,57 @@
-use std::fs;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy)]
-enum RPS {
+enum Move {
     Rock,
     Paper,
     Scissors,
 }
 
+impl TryFrom<char> for Move {
+    type Error = color_eyre::Report;
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
+        match c {
+            'A' | 'X' => Ok(Move::Rock),
+            'B' | 'Y' => Ok(Move::Paper),
+            'C' | 'Z' => Ok(Move::Scissors),
+            _ => Err(color_eyre::eyre::eyre!("Not a valid move: {c:?}")),
+        }
+    }
+}
+
+struct Round {
+    theirs: Move,
+    ours: Move
+}
+
+impl FromStr for Round {
+    type Err = color_eyre::Report;
+
+    fn try_from(s: &str) -> Result<Self, Self::Err> {
+        let mut chars = s.chars();
+        let (Some(theirs), Some(' '), Some(ours), None) = (chars.next(), chars.next(), chars.next(), chars.next());
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 enum Outcome {
+    Loss,
+    Draw,
     Win,
-    Lose,
-    Tie,
 }
+impl TryFrom<char> for Outcome {
+    type Error = color_eyre::Report;
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
+        match c {
+            'X' => Ok(Outcome::Loss),
+            'Y' => Ok(Outcome::Draw),
+            'Z' => Ok(Outcome::Win),
+        }
+    }
+}
+
 impl Outcome {
     fn points(&self) -> usize {
         match self {
@@ -145,4 +184,18 @@ fn main() {
     
     println!("{:?}", score);
     println!("{:?}", cheated_score);
+}
+
+#[cfg(test)]
+#[test]
+fn part1_works() {
+    let input = include_str!("day2_test.txt");
+    assert_eq!(process_part1(input), 2);
+}
+
+#[cfg(test)]
+#[test]
+fn part2_works() {
+    let input = include_str!("day2_test.txt");
+    assert_eq!(process_part2(input), 4);
 }

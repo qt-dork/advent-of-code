@@ -1,4 +1,7 @@
 use std::str::FromStr;
+
+const DAY: &str = "day4";
+
 const INPUT: &str = include_str!("day4.txt");
 
 #[cfg(test)]
@@ -10,6 +13,8 @@ const TEST_INPUT: &str = "\
 6-6,4-6
 2-6,4-8";
 
+// in retrospect, i don't like part 1 and 2 being in the same function.
+// i'm going back to a part 1 and part 2 function.
 fn answer(input: &str) -> (u32, u32) {
     input
         .split_whitespace()
