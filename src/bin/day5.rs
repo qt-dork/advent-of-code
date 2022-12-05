@@ -1,5 +1,3 @@
-use std::vec;
-
 use nom::*;
 use nom::bytes::complete::tag;
 use nom::character::complete::{
