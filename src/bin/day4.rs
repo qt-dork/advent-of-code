@@ -1,7 +1,5 @@
 use std::str::FromStr;
 
-const DAY: &str = "day4";
-
 const INPUT: &str = include_str!("day4.txt");
 
 #[cfg(test)]
