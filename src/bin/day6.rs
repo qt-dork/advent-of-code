@@ -14,7 +14,6 @@ fn process_part1(input: &str) -> usize {
         // let mut chars = chars.clone();
         let is_unique = chars.iter().sorted().dedup().count();
 
-        
         if is_unique == 4 {
             answer = i + 4;
             break;
@@ -32,7 +31,6 @@ fn process_part2(input: &str) -> usize {
         // let mut chars = chars.clone();
         let is_unique = chars.iter().sorted().dedup().count();
 
-        
         if is_unique == 14 {
             answer = i + 14;
             break;

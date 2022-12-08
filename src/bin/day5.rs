@@ -130,7 +130,7 @@ fn parse_instruction(i: &str) -> IResult<&str, Instruction> {
             preceded(tag(" to "), parse_pile_number),
         )),
         |(quantity, from, to)| Instruction { quantity, from
-        , to},
+        , to },
     )(i)
 }
 
