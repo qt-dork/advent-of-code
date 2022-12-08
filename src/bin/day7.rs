@@ -1,212 +1,277 @@
+use camino::Utf8PathBuf;
 use nom::{
-    *,
     branch::alt,
-    bytes::complete::{tag, take, take_while1, take_until1},
-    character::complete::char,
-    combinator::{all_consuming, map, opt, map_res},
-    sequence::{preceded, separated_pair, tuple},
+    bytes::complete::{tag, take_while1},
+    combinator::{all_consuming, map},
+    sequence::{preceded, separated_pair},
     Finish, IResult,
 };
 
-fn main() {
-    let input = include_str!("day7.txt");
+#[derive(Debug)]
+struct FsEntry {
+    path: Utf8PathBuf,
+    size: u64,
+    children: Vec<FsEntry>,
 }
 
-// ===============
-// Data Structures
-// ===============
-
-// Probably useless? Can be derived 
-#[derive(Debug, Clone, Copy)]
-enum FileKind {
-    File,
-    Folder
-}
-
-// Maybe a file type?
-struct File<'a> {
-    name: &'a str,
-    parent: Option<Id>,
-    size: Option<usize>,
-    kind: FileKind,
-}
-
-struct Folder<'a> {
-    name: &'a str,
-    parent: Option<Id>,
-}
-
-type Id = usize;
-
-#[derive(Debug, Clone)]
-struct FileTree {
-    id: Vec<Id>,
-    next_id: Id,
-    // Only the root doesn't have a parent
-    parent: Vec<Option<Id>>,
-    // I should use a &str, but I'm not going to
-    // stress out this much about the least important
-    // part of the file
-    name: Vec<String>,
-    kind: Vec<FileKind>,
-    // All files should eventually have a size, 
-    // but folders can only determine their size
-    // once the entire file tree is built.
-    size: Vec<Option<usize>>
-}
-
-impl FileTree {
-    fn new() -> Self {
-        FileTree { 
-            id: Vec::new(), 
-            next_id: 0, 
-            parent: Vec::new(),
-            name: Vec::new(), 
-            kind: Vec::new(), 
-            size: Vec::new() 
-        }
+impl FsEntry {
+    fn total_size(&self) -> u64 {
+        self.size + self.children.iter().map(|c| c.total_size()).sum::<u64>()
     }
 
-    fn insert(
-        &mut self,
-        (name, parent, kind, size): (&str, Option<Id>, FileKind, Option<usize>)
-    ) -> Id {
-        let id = self.next_id;
-        self.next_id += 1;
-        self.id.push(id);
-        self.name.push(name.to_string());
-        self.parent.push(parent);
-        self.kind.push(kind);
-        self.size.push(size);
-
-        id
-    }
-}
-
-// ============
-// Text Parsing
-// ============
-
-// Breaking it down
-// 
-// ┌── Parse a command (command branch)
-// │     ┌── Next one is parent folder name
-// │     │   (use to find parent id for FileTree)
-// │     │      ┌── Parent folder name
-// │     │      │
-// [ $ ] [ cd ] [ / ]
-// [ $ ] [ ls ]  
-//       └── Skip
-// 
-// ┌── Skip
-// [ dir ] [ a ]
-// [ 14848514 ] [ b.txt ]
-// │            └── File Name
-// └── Size is `Some(size)`
-// 
-// [ $ ] [ cd ]  [ .. ]
-//               └── Skip
-
-// ------------
-// File Parsing
-// ------------
-fn parse_number(i: &str) -> IResult<&str, usize> {
-    map_res(take_while1(|c: char| c.is_ascii_digit()), |s: &str| {
-        s.parse::<usize>()
-    })(i)
-}
-
-fn parse_name(
-    i: &str
-) -> IResult<&str, &str> {
-    take_while1(|c: char| c.is_ascii_alphabetic() || c.is_ascii_punctuation())(i)
-}
-
-fn parse_file_or_folder(
-    (i, parent): (&str, Id)
-) -> IResult<&str, Option<File>> {
-    alt((
-        map(
-            preceded(tag("dir "), parse_name),
-            |_| None
-        ),
-        map(
-            separated_pair(
-                parse_number,
-                char(' '),
-                parse_name
-            ),
-            |(size, name)| {
-                Some(File { 
-                    name, 
-                    parent: Some(parent), 
-                    size: Some(size), 
-                    kind: FileKind::File 
-                })
-            }
+    fn all_dirs(&self) -> Box<dyn Iterator<Item = &FsEntry> + '_> {
+        Box::new(
+            std::iter::once(self).chain(
+                self.children
+                    .iter()
+                    .filter(|c| !c.children.is_empty())
+                    .flat_map(|c| c.all_dirs()),
+            )
         )
+    }
+}
+
+fn main() -> color_eyre::Result<()> {
+    color_eyre::install().unwrap(); 
+
+    let input = include_str!("day7.txt");
+    let result = process_part1(input)?;
+    let result2 = process_part2(input)?;
+    println!("{}", result);
+    println!("{}", result2);
+
+    Ok(())
+}
+
+fn parse_path(i: &str) -> IResult<&str, Utf8PathBuf> {
+    map(
+        take_while1(|c: char| "abcdefghijklmnopqrstuvwxyz./".contains(c)),
+        Into::into
+    )(i)
+}
+#[derive(Debug)]
+struct Ls;
+
+fn parse_ls(i: &str) -> IResult<&str, Ls> {
+    map(tag("ls"), |_| Ls)(i)
+}
+
+#[derive(Debug)]
+struct Cd(Utf8PathBuf);
+
+fn parse_cd(i: &str) -> IResult<&str, Cd> {
+    map(preceded(tag("cd "), parse_path), Cd)(i)
+}
+
+#[derive(Debug)]
+enum Command {
+    Ls,
+    Cd(Utf8PathBuf)
+}
+
+impl From<Ls> for Command {
+    fn from(_ls: Ls) -> Self {
+        Command::Ls
+    }
+}
+
+impl From<Cd> for Command {
+    fn from(cd: Cd) -> Self {
+        Command::Cd(cd.0)
+    }
+}
+
+fn parse_command(i: &str) -> IResult<&str, Command> {
+    let (i, _) = tag("$ ")(i)?;
+    alt((map(parse_ls, Into::into), map(parse_cd, Into::into)))(i)
+}
+
+#[derive(Debug)]
+enum Entry {
+    Dir(Utf8PathBuf),
+    File(u64, Utf8PathBuf),
+}
+
+fn parse_entry(i: &str) -> IResult<&str, Entry> {
+    let parse_file = map(
+        separated_pair(nom::character::complete::u64, tag(" "), parse_path),
+        |(size, path)| Entry::File(size, path),
+    );
+    let parse_dir = map(preceded(tag("dir "), parse_path), Entry::Dir);
+
+    alt((parse_file, parse_dir))(i)
+}
+
+#[derive(Debug)]
+enum Line {
+    Command(Command),
+    Entry(Entry),
+}
+
+fn parse_line(i: &str) -> IResult<&str, Line> {
+    alt((
+        map(parse_command, Line::Command),
+        map(parse_entry, Line::Entry),
     ))(i)
 }
 
-// -------------------
-// Instruction Parsing
-// -------------------
-
-fn parse_back_or_name(i: &str) -> IResult<&str, Option<&str>> {
-    alt((map(tag(".."), |_| None), map(parse_name, Some)))(i)
-}
-
-fn parse_cd(i: &str) -> IResult<&str, Option<&str>> {
-    preceded(tag("cd "), parse_back_or_name)(i)
-}
-
-// I could generalize `parse_dir()` instead of this
-// but it's 5 am.
-fn parse_ls(i: &str) -> IResult<&str, ()> {
-    map(tag("ls"), drop)(i)
-}
-
-// Once again I could generalize `parse_size_or_dir`,
-// but once again, it's 5 am
-/// Parses a `cd` or `ls`.
-/// Returns `Some(folder_name)` if the command is `cd`
-/// and [`None`] if the command is ls
-fn parse_cd_or_ls(i: &str) -> IResult<&str, Option<&str>> {
-    alt((parse_cd, map(parse_ls, |_| None)))(i)
-}
-
-// this could all be so much more concise aaaaaa
-fn parse_instruction((i, parent): (&str, Option<usize>)) -> IResult<&str, Option<Folder>> {
-    map(
-        preceded(tag("$ "), parse_cd_or_ls),
-        |some_name| {
-            match some_name {
-                Some(name) => Some(Folder {
-                    name,
-                    parent
-                }),
-                None => None
-            }
-        }
-    )(i)
-}
-
-fn parse_set(i: &str) -> IResult<&str, (&str, Vec<File>)> {
+fn process_part1(i: &str) -> color_eyre::Result<u64, color_eyre::Report> {
+    let lines = i
+        .lines()
+        .map(|l| all_consuming(parse_line)(l).finish().unwrap().1);
     
+    let mut stack = vec![FsEntry {
+        path: "/".into(),
+        size: 0,
+        children: vec![],
+    }];
+
+    for line in lines {
+        println!("{line:?}");
+        match line {
+            Line::Command(cmd) => match cmd {
+                Command::Ls => {
+                    // ignore
+                },
+                Command::Cd(path) => match path.as_str() {
+                    "/" => {
+                        // ignore
+                    },
+                    ".." => {
+                        let child = stack.pop();
+                        stack.last_mut().unwrap().children.push(child.unwrap());
+                    },
+                    _ => {
+                        let node = FsEntry {
+                            path: path.clone(),
+                            size: 0,
+                            children: vec![],
+                        };
+                        stack.push(node);
+                    },
+                },
+            },
+            Line::Entry(entry) => match entry {
+                Entry::Dir(_) => {
+                    // ignore
+                },
+                Entry::File(size, path) => {
+                    let node = FsEntry {
+                        size,
+                        path,
+                        children: vec![],
+                    };
+                    stack.last_mut().unwrap().children.push(node);
+                }
+            },
+        }
+    }
+
+    let mut root = stack.pop().unwrap();
+    while let Some(mut next) = stack.pop() {
+        next.children.push(root);
+        root = next;
+    }
+    dbg!(&root);
+
+    let sum = root
+        .all_dirs()
+        .map(|d| d.total_size())
+        .filter(|&s| s <= 100_000)
+        .sum::<u64>();
+    dbg!(sum);
+
+    Ok(sum)
 }
 
+fn process_part2(i: &str) -> color_eyre::Result<u64, color_eyre::Report> {
+    let lines = i
+        .lines()
+        .map(|l| all_consuming(parse_line)(l).finish().unwrap().1);
+    
+    let mut stack = vec![FsEntry {
+        path: "/".into(),
+        size: 0,
+        children: vec![],
+    }];
 
+    for line in lines {
+        println!("{line:?}");
+        match line {
+            Line::Command(cmd) => match cmd {
+                Command::Ls => {
+                    // ignore
+                },
+                Command::Cd(path) => match path.as_str() {
+                    "/" => {
+                        // ignore
+                    },
+                    ".." => {
+                        let child = stack.pop();
+                        stack.last_mut().unwrap().children.push(child.unwrap());
+                    },
+                    _ => {
+                        let node = FsEntry {
+                            path: path.clone(),
+                            size: 0,
+                            children: vec![],
+                        };
+                        stack.push(node);
+                    },
+                },
+            },
+            Line::Entry(entry) => match entry {
+                Entry::Dir(_) => {
+                    // ignore
+                },
+                Entry::File(size, path) => {
+                    let node = FsEntry {
+                        size,
+                        path,
+                        children: vec![],
+                    };
+                    stack.last_mut().unwrap().children.push(node);
+                }
+            },
+        }
+    }
+
+    let mut root = stack.pop().unwrap();
+    while let Some(mut next) = stack.pop() {
+        next.children.push(root);
+        root = next;
+    }
+    dbg!(&root);
+
+    let sum = root.total_size();
+    let unused_space = 70000000 - sum;
+    println!("Total Space: {}\nOccupied Space: {}\nUnused Space: {}\n", 70000000, sum, unused_space);
+    dbg!(unused_space);
+    let necessary_space = 30000000 - unused_space;
+    println!("Space needed to delete for update: {}", necessary_space);
+    dbg!(necessary_space);
+
+    let dir = root
+        .all_dirs()
+        .map(|d| d.total_size())
+        .filter(|&s| s >= necessary_space)
+        .min()
+        .unwrap();
+    dbg!(dir);
+
+    Ok(dir)
+}
 
 #[cfg(test)]
 #[test]
 fn part1_works() {
     let input = include_str!("day7_test.txt");
-    assert_eq!(process_part1(input), 95437);
+    assert_eq!(process_part1(input).unwrap(), 95437);
 }
 
-// #[cfg(test)]
-// #[test]
-// fn part2_works() {
-//     let input = include_str!("day5_test.txt");
-//     assert_eq!(process_part2(input), "MCD");
-// }
+#[cfg(test)]
+#[test]
+fn part2_works() {
+    let input = include_str!("day7_test.txt");
+    assert_eq!(process_part2(input).unwrap(), 24933642);
+}
