@@ -1,9 +1,8 @@
 
 fn main() {
     let input = include_str!("sample.txt");
-
     let output = part1(input);
-    println!("{}", output);
+    dbg!("{}", output);
 }
 
 fn parse(input: &str) -> usize {
