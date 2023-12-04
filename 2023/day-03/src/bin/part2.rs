@@ -73,8 +73,8 @@ impl Part {
 
 #[derive(Debug, Clone)]
 struct Grid {
-    width: usize,
-    height: usize,
+    _width: usize,
+    _height: usize,
     // it kinda sucks that the vector doesn't match the shape of the data
     // but since parts can occupy multiple squares it feels easier to instead
     // have to read every part individually to see if parts intersect. tragic
@@ -84,8 +84,8 @@ struct Grid {
 impl Grid {
     pub fn new((width, height): (usize, usize)) -> Self {
         Self {
-            width,
-            height,
+            _width: width,
+            _height: height,
             items: Vec::new(),
         }
     }
@@ -149,10 +149,10 @@ fn part2(i: &str) -> String {
                 let mut parts = Vec::new();
 
                 for sub_part in grid.items.iter() {
-                    if (sub_part.kind != PartType::Symbol && {
+                    if sub_part.kind != PartType::Symbol && {
                         let (start_coord, end_coord) = sub_part.coords();
                         let (top_left, bottom_right) = part.line_of_sight();
-                        // lose all hope all ye who enter here
+                        // abandon all hope all ye who enter here
                         start_coord.x >= top_left.x
                             && start_coord.x <= bottom_right.x
                             && start_coord.y >= top_left.y
@@ -161,7 +161,7 @@ fn part2(i: &str) -> String {
                                 && end_coord.x <= bottom_right.x
                                 && end_coord.y >= top_left.y
                                 && end_coord.y <= bottom_right.y
-                    }) {
+                    } {
                         parts.push(sub_part);
                     }
                 }

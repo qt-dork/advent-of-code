@@ -12,7 +12,7 @@ fn part1(input: &str) -> String {
     let games: Vec<_> = input
         .lines()
         .map(|l| {
-            let l = l.trim_start_matches(" ");
+            let l = l.trim_start_matches(' ');
             all_consuming(Game::parse)(l).finish().unwrap().1
         })
         .collect();
