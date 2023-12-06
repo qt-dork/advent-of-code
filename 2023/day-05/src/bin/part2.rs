@@ -319,10 +319,10 @@ impl SeedMap {
         dbg!(self_range);
         let range_min = range.clone().min().unwrap();
         let range_max = range.clone().max().unwrap();
-        let overlapping = (range_min >= self.from && range_min <= self.max_from()) ||
-         (range_max >= self.from && range_max <= self.max_from()) ||
-         (self.max_from() >= range_min && self.from <= range_max) ||
-         (self.max_from() >= range_min && self.max_from() <= range_max);
+        let overlapping = (range_min >= self.from && range_min <= self.max_from())
+            || (range_max >= self.from && range_max <= self.max_from())
+            || (self.max_from() >= range_min && self.from <= range_max)
+            || (self.max_from() >= range_min && self.max_from() <= range_max);
         dbg!(overlapping);
         overlapping
     }
@@ -346,8 +346,7 @@ impl SeedMap {
         if range_min >= self.from && range_max <= self.max_from() {
             dbg!("inside");
             vec![range.to_owned()]
-        }
-        else if range_min <= self.from && range_max >= self.max_from() {
+        } else if range_min <= self.from && range_max >= self.max_from() {
             // case 3: seedmap is inside the range
             // [ 3, 4, [[ 5, 6 , 7 ]] 8, 9 ]
             //            ^overlap
@@ -356,7 +355,11 @@ impl SeedMap {
             let middle = self.from..self.max_from();
             let higher = self.max_from()..range_max;
             let out = vec![lower, middle, higher];
-            let out: Vec<Range<_>> = out.iter().filter(|x| x.len() != 0).map(|x| x.to_owned()).collect();
+            let out: Vec<Range<_>> = out
+                .iter()
+                .filter(|x| x.len() != 0)
+                .map(|x| x.to_owned())
+                .collect();
             out
         }
         // case 2: intersects with seedmap
@@ -375,7 +378,11 @@ impl SeedMap {
             let higher = to..range_max;
             let out = vec![lower, higher];
             dbg!(out.clone());
-            let out: Vec<Range<_>> = out.iter().filter(|x| x.len() != 0).map(|x| x.to_owned()).collect();
+            let out: Vec<Range<_>> = out
+                .iter()
+                .filter(|x| x.len() != 0)
+                .map(|x| x.to_owned())
+                .collect();
             out
         }
     }
@@ -531,7 +538,7 @@ fn part1(i: &str) -> String {
     //         seed
     //     })
     //     .collect();
-    
+
     let tmp_seeds = seeds.clone();
 
     let new_seeds: Vec<_> = seedmaps.iter().fold(seeds, |accum, map| {
@@ -569,11 +576,10 @@ fn part1(i: &str) -> String {
     });
 
     dbg!(new_seeds.clone());
-    
-    
+
     // let new_seeds = new_seeds.iter().map(|x| x.collect::<Vec<_>>().iter().filter(|y| {dbg!(y.clone()); tmp_seeds.iter().contains(y)}));
 
-    // dbg!(new_seeds);    
+    // dbg!(new_seeds);
     // let min = new_seeds.iter().reduce(|accum, x| {
     //     let accum_min = accum.clone().min().unwrap();
     //     let x_min = x.clone().min().unwrap();
@@ -583,13 +589,20 @@ fn part1(i: &str) -> String {
     //         x
     //     }
     // }).unwrap().clone().min().unwrap();
-    
+
     let mut min = usize::MAX;
-    for i in new_seeds.clone().into_iter() {
-        for j in i {
-            for k in tmp_seeds.clone().into_iter() {
-                if k.contains(&j) && j < min {
-                    min = j;
+    for i in tmp_seeds.clone().into_iter() {
+        for j in new_seeds.clone().into_iter() {
+            if is_overlapping(&i, &j) {
+                let overlap = overlap(&i, &j);
+                let overlap = overlap.iter().find_or_first(|x| is_overlapping(x, &i));
+                let mini = if overlap.is_some() {
+                    overlap.unwrap().clone().min().unwrap()
+                } else {
+                    usize::MAX
+                };
+                if mini < min {
+                    min = mini;
                 }
             }
         }
@@ -599,4 +612,65 @@ fn part1(i: &str) -> String {
     // let min = new_seeds.iter().r.unwrap_or(&0);
 
     "min".to_string()
+}
+
+fn is_overlapping(lhs: &Range<usize>, rhs: &Range<usize>) -> bool {
+    let rhs_min = rhs.clone().min().unwrap();
+    let rhs_max = rhs.clone().max().unwrap();
+    let lhs_min = lhs.clone().min().unwrap();
+    let lhs_max = lhs.clone().max().unwrap();
+    let overlapping = (rhs_min >= lhs_min && rhs_min <= lhs_max)
+        || (rhs_max >= lhs_min && rhs_max <= lhs_max)
+        || (lhs_max >= rhs_min && lhs_min <= rhs_max)
+        || (lhs_max >= rhs_min && lhs_max <= rhs_max);
+    overlapping
+}
+
+fn overlap(lhs: &Range<usize>, rhs: &Range<usize>) -> Vec<Range<usize>> {
+    // check which kind of overlapping
+
+    let rhs_min = rhs.clone().min().unwrap();
+    let rhs_max = rhs.clone().max().unwrap();
+    let lhs_min = lhs.clone().min().unwrap();
+    let lhs_max = lhs.clone().max().unwrap();
+
+    // case 1: inside the seedmap
+    // [[ 1, 2, 3, [ 4, 5, 6 ] 7, 8, 9 ]]
+    if rhs_min >= lhs_min && rhs_max <= lhs_max {
+        vec![rhs.to_owned()]
+    } else if rhs_min <= lhs_min && rhs_max >= lhs_max {
+        // case 3: seedmap is inside the range
+        // [ 3, 4, [[ 5, 6 , 7 ]] 8, 9 ]
+        //            ^overlap
+        let lower = rhs_min..lhs_min;
+        let middle = lhs_min..lhs_max;
+        let higher = lhs_max..rhs_max;
+        let out = vec![lower, middle, higher];
+        let out: Vec<Range<_>> = out
+            .iter()
+            .filter(|x| x.len() != 0)
+            .map(|x| x.to_owned())
+            .collect();
+        out
+    }
+    // case 2: intersects with seedmap
+    // [4, [[ 5,6 ], 7, 8]]
+    //      ^overlap
+    else {
+        let to;
+        if lhs_min < rhs_min {
+            to = lhs_max;
+        } else {
+            to = lhs_min;
+        }
+        let lower = rhs_min..to;
+        let higher = to..rhs_max;
+        let out = vec![lower, higher];
+        let out: Vec<Range<_>> = out
+            .iter()
+            .filter(|x| x.len() != 0)
+            .map(|x| x.to_owned())
+            .collect();
+        out
+    }
 }
