@@ -8,17 +8,21 @@ function parse(input: string) {
   return lists;
 }
 
+function test(item: number[]): boolean {
+  const itemWindowThree = slidingWindows(item, 3);
+  const isOnlyUpOrDown = itemWindowThree.some(([a, b, c]) =>
+    (a - b > 0) !== (b - c > 0) || (a - b == 0) || (b - c == 0)
+  );
+  const itemWindowTwo = slidingWindows(item, 2);
+  const isInRange = itemWindowTwo.some(([a, b]) => Math.abs(a - b) > 3);
+
+  return !(isOnlyUpOrDown || isInRange);
+}
+
 function part1(input: string): number {
   const items = parse(input);
   const result = items.filter((item) => {
-    const itemWindowThree = slidingWindows(item, 3);
-    const isOnlyUpOrDown = itemWindowThree.some(([a, b, c]) =>
-      (a - b > 0) !== (b - c > 0) || (a - b == 0) || (b - c == 0)
-    );
-    const itemWindowTwo = slidingWindows(item, 2);
-    const isInRange = itemWindowTwo.some(([a, b]) => Math.abs(a - b) > 3);
-
-    return !(isOnlyUpOrDown || isInRange);
+    return test(item);
   }).length;
   // throw new Error("TODO");
   return result;
@@ -27,46 +31,54 @@ function part1(input: string): number {
 function part2(input: string): number {
   const items = parse(input);
   const result = items.filter((item) => {
-    let output = false;
-    let itemCopy = item;
-    const direction = slidingWindows(item, 2).reduce(
-      (accum, [a, b]) => (accum + (a - b > 0 ? 1 : -1)),
-      0,
-    ) > 0;
-    for (let i = 0; i < itemCopy.length; i++) {
-      const x = itemCopy[i];
-      const y = itemCopy[i + 1];
-      if (
-        (i + 1 < itemCopy.length && (x - y > 0) !== direction)
-      ) {
-        if (!output) {
-          itemCopy = itemCopy.toSpliced(i, 1);
-          output = true;
-          i = 0;
-          continue;
-        } else {
-          return false;
-        }
-      }
-      if (
-        i + 1 < itemCopy.length &&
-        ((Math.abs(x - y) > 3) || Math.abs(x - y) === 0)
-      ) {
-        if (!output) {
-          itemCopy = itemCopy.toSpliced(i + 1, 1);
-          output = true;
-          i = 0;
-          continue;
-        } else {
-          return false;
-        }
-      }
-    }
-    return true;
-  }).length;
-  // throw new Error("TODO");
-  return result;
-  // throw new Error("TODO");
+    let arrItems: number[][] = [];
+    item.forEach((_, i) => {
+      arrItems.push(item.toSpliced(i, 1));
+    });
+    return arrItems.some(test);
+  });
+
+  return result.length;
+  //   let output = false;
+  //   let itemCopy = item;
+  //   const direction = slidingWindows(item, 2).reduce(
+  //     (accum, [a, b]) => (accum + (a - b > 0 ? 1 : -1)),
+  //     0,
+  //   ) > 0;
+  //   for (let i = 0; i < itemCopy.length; i++) {
+  //     const x = itemCopy[i];
+  //     const y = itemCopy[i + 1];
+  //     if (
+  //       (i + 1 < itemCopy.length && (x - y > 0) !== direction)
+  //     ) {
+  //       if (!output) {
+  //         itemCopy = itemCopy.toSpliced(i, 1);
+  //         output = true;
+  //         i = 0;
+  //         continue;
+  //       } else {
+  //         return false;
+  //       }
+  //     }
+  //     if (
+  //       i + 1 < itemCopy.length &&
+  //       ((Math.abs(x - y) > 3) || Math.abs(x - y) === 0)
+  //     ) {
+  //       if (!output) {
+  //         itemCopy = itemCopy.toSpliced(i + 1, 1);
+  //         output = true;
+  //         i = 0;
+  //         continue;
+  //       } else {
+  //         return false;
+  //       }
+  //     }
+  //   }
+  //   return true;
+  // }).length;
+  // // throw new Error("TODO");
+  // return result;
+  // // throw new Error("TODO");
 }
 
 if (import.meta.main) {
