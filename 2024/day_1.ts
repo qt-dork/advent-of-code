@@ -1,35 +1,26 @@
-import { zip } from "jsr:@std/collections/zip";
+import { sumOf, unzip, zip } from "jsr:@std/collections";
 import { assertEquals } from "@std/assert";
 import { runPart } from "@macil/aocd";
 
 function parse(input: string) {
   const lists = input.trimEnd().split("\n").map((x) =>
-    x.split("   ").map(Number)
+    x.split("   ").map(Number) as [number, number] // can only have two numbers in input
   );
-  const listA = lists.map((x) => {
-    const [num, _] = x;
-    return num;
-  });
-  const listB = lists.map((x) => {
-    const [_, ber] = x;
-    return ber;
-  });
-  return {
-    a: listA,
-    b: listB,
-  };
+  const unpaired = unzip(lists);
+  return unpaired;
 }
 
 function part1(input: string): number {
   const items = parse(input);
-  const sortedItems = {
-    a: items.a.toSorted((a, b) => a - b),
-    b: items.b.toSorted((a, b) => a - b),
-  };
+  const sorted = [
+    items[0].toSorted((a, b) => a - b),
+    items[1].toSorted((a, b) => a - b),
+  ];
 
-  const zipped = zip(sortedItems.a, sortedItems.b).map(([a, b]) =>
-    Math.abs(a - b)
-  ).reduce((accum, cur) => accum + cur);
+  const zipped = zip(sorted[0], sorted[1]).reduce(
+    (accum, [a, b]) => (accum + Math.abs(a - b)),
+    0,
+  );
   // throw new Error("TODO");
   console.log(zipped);
   return zipped;
@@ -43,12 +34,11 @@ function part2(input: string): number {
   //   b: items.b.toSorted((a, b) => a - b),
   // };
 
-  const scores = items.a.map((x) => {
-    const matches = items.b.filter((y) => x === y);
-    const sum = matches.reduce((acc, _) => (acc + 1), 0);
+  const scores = items[0].map((x) => {
+    const sum = items[1].filter((y) => x === y).length;
     return x * sum;
   });
-  const score = scores.reduce((accum, cur) => accum + cur); // I need to make a sum function
+  const score = sumOf(scores, (x) => x);
   // throw new Error("TODO");
   return score;
 }
